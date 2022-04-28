@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="accumulatorsByAuto" pageWidth="961" pageHeight="800" orientation="Landscape" whenNoDataType="BlankPage" columnWidth="961" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.scriptlethandling" value="0"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="tcode" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[new Integer(0)]]></defaultValueExpression>
+	</parameter>
+	<parameter name="year" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[select a.factory, a.name||' : '||a.typename as tname, a.serialnumber,
+       ah.installdate, a.potencial, a.mileageall,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.01.'||$P{year}, 'dd.mm.yyyy') and to_date('31.01.'||$P{year}, 'dd.mm.yyyy')) as m01,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.02.'||$P{year}, 'dd.mm.yyyy') and to_date('28.02.'||$P{year}, 'dd.mm.yyyy')) as m02,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.03.'||$P{year}, 'dd.mm.yyyy') and to_date('31.03.'||$P{year}, 'dd.mm.yyyy')) as m03,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.04.'||$P{year}, 'dd.mm.yyyy') and to_date('30.04.'||$P{year}, 'dd.mm.yyyy')) as m04,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.05.'||$P{year}, 'dd.mm.yyyy') and to_date('31.05.'||$P{year}, 'dd.mm.yyyy')) as m05,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.06.'||$P{year}, 'dd.mm.yyyy') and to_date('30.06.'||$P{year}, 'dd.mm.yyyy')) as m06,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.07.'||$P{year}, 'dd.mm.yyyy') and to_date('31.07.'||$P{year}, 'dd.mm.yyyy')) as m07,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.08.'||$P{year}, 'dd.mm.yyyy') and to_date('31.08.'||$P{year}, 'dd.mm.yyyy')) as m08,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.09.'||$P{year}, 'dd.mm.yyyy') and to_date('30.09.'||$P{year}, 'dd.mm.yyyy')) as m09,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.10.'||$P{year}, 'dd.mm.yyyy') and to_date('31.10.'||$P{year}, 'dd.mm.yyyy')) as m10,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.11.'||$P{year}, 'dd.mm.yyyy') and to_date('30.11.'||$P{year}, 'dd.mm.yyyy')) as m11,
+
+       (select coalesce(sum(td.recorddistance),0)
+       from enaccumulatorsdistance td
+       where td.accumulatorsrefcode = a.code
+         and td.transportrealrefcode = tr.code
+         and td.recordtdate between to_date('01.12.'||$P{year}, 'dd.mm.yyyy') and to_date('31.12.'||$P{year}, 'dd.mm.yyyy')) as m12,
+
+       (a.potencial-a.mileageall) as rest,
+       case when (a.potencial-a.mileageall) < 0
+         then 1 else 0 end as replacement
+
+from tktransportreal tr, enaccumulatorshistory ah, enaccumulators a
+where ah.transportrealrefcode = tr.code
+and a.code = ah.accumulatorsrefcode
+and ah.uninstalldate is null
+and tr.code = $P{tcode}
+order by a.serialnumber]]>
+	</queryString>
+	<field name="factory" class="java.lang.String"/>
+	<field name="tname" class="java.lang.String"/>
+	<field name="serialnumber" class="java.lang.String"/>
+	<field name="installdate" class="java.sql.Date"/>
+	<field name="potencial" class="java.lang.Double"/>
+	<field name="mileageall" class="java.lang.Double"/>
+	<field name="m01" class="java.lang.Double"/>
+	<field name="m02" class="java.lang.Double"/>
+	<field name="m03" class="java.lang.Double"/>
+	<field name="m04" class="java.lang.Double"/>
+	<field name="m05" class="java.lang.Double"/>
+	<field name="m06" class="java.lang.Double"/>
+	<field name="m07" class="java.lang.Double"/>
+	<field name="m08" class="java.lang.Double"/>
+	<field name="m09" class="java.lang.Double"/>
+	<field name="m10" class="java.lang.Double"/>
+	<field name="m11" class="java.lang.Double"/>
+	<field name="m12" class="java.lang.Double"/>
+	<field name="rest" class="java.lang.Double"/>
+	<field name="replacement" class="java.lang.Integer"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="14" splitType="Stretch">
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-1" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="0" width="60" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{factory}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-18" stretchType="RelativeToTallestObject" mode="Transparent" x="60" y="0" width="80" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{tname}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-19" stretchType="RelativeToTallestObject" mode="Transparent" x="140" y="0" width="55" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["΄"+$F{serialnumber}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="dd.MM.yyyy" isBlankWhenNull="true">
+				<reportElement key="textField-20" stretchType="RelativeToTallestObject" mode="Transparent" x="195" y="0" width="56" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{installdate}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-23" stretchType="RelativeToTallestObject" mode="Transparent" x="251" y="0" width="50" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{potencial}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-24" stretchType="RelativeToTallestObject" mode="Transparent" x="301" y="0" width="60" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{mileageall}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-43" stretchType="RelativeToTallestObject" mode="Transparent" x="361" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m01}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-44" stretchType="RelativeToTallestObject" mode="Transparent" x="401" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m02}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-45" stretchType="RelativeToTallestObject" mode="Transparent" x="441" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m03}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-46" stretchType="RelativeToTallestObject" mode="Transparent" x="481" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m04}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-47" stretchType="RelativeToTallestObject" mode="Transparent" x="521" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m05}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-48" stretchType="RelativeToTallestObject" mode="Transparent" x="561" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m06}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-49" stretchType="RelativeToTallestObject" mode="Transparent" x="601" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m07}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-50" stretchType="RelativeToTallestObject" mode="Transparent" x="641" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m08}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-51" stretchType="RelativeToTallestObject" mode="Transparent" x="681" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m09}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-52" stretchType="RelativeToTallestObject" mode="Transparent" x="721" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m10}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-53" stretchType="RelativeToTallestObject" mode="Transparent" x="761" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m11}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-54" stretchType="RelativeToTallestObject" mode="Transparent" x="801" y="0" width="40" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{m12}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.#######" isBlankWhenNull="true">
+				<reportElement key="textField-55" stretchType="RelativeToTallestObject" mode="Transparent" x="841" y="0" width="60" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{rest}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-56" stretchType="RelativeToTallestObject" mode="Transparent" x="901" y="0" width="60" height="14" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{replacement}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

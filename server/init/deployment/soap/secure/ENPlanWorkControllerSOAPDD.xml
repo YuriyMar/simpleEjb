@@ -1,0 +1,198 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<isd:service xmlns:isd="http://xml.apache.org/xml-soap/deployment"
+     id='http://ksoe.org/ENPlanWorkController/message/'>
+<isd:provider type="org.apache.soap.providers.EnergyAuthorizationStatelessEJBProvider" scope="Session" methods="create">
+ <isd:java class="com.ksoe.energynet.ejb.ENPlanWorkController"/>
+ <isd:option key="FullHomeInterfaceName" value="com.ksoe.energynet.ejb.ENPlanWorkControllerHome"/>
+ <isd:option key="JNDIName" value="ksoe/energynet/ENPlanWorkController"/>
+ <isd:option key="ContextProviderURL" value="iiop://localhost:900"/>
+ <isd:option key="FullContextFactoryName" value="com.ibm.websphere.naming.WsnInitialContextFactory"/>
+ <isd:option key="KsoeClientSessionContextBeanURIName" value="http://ksoe.org/AuthorizationSessionStatelessController/message/" />
+</isd:provider>
+
+<isd:faultListener>org.apache.soap.server.DOMFaultListener</isd:faultListener>
+
+<isd:mappings>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://www.w3.org/2001/XMLSchema" qname="x:date"
+     javaType = "java.util.Date"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.DateSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.DateSerializer"/>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://www.w3.org/2001/XMLSchema" qname="x:date"
+     javaType = "java.util.Date"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.DateSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.DateSerializer"/>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://www.w3.org/2001/XMLSchema" qname="x:dateTime"
+     javaType = "java.util.Date"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.DateSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.DateSerializer"/>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWork"
+     javaType="com.ksoe.energynet.valueobject.ENPlanWork"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkShortList"
+     javaType="com.ksoe.energynet.valueobject.lists.ENPlanWorkShortList"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkShort"
+     javaType="com.ksoe.energynet.valueobject.brief.ENPlanWorkShort"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkFilter"
+     javaType="com.ksoe.energynet.valueobject.filter.ENPlanWorkFilter"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkStatus"
+     javaType="com.ksoe.energynet.valueobject.ENPlanWorkStatus"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENElementRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENElementRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkTypeRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENPlanWorkTypeRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkStateRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENPlanWorkStateRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:EPRenRef"
+     javaType="com.ksoe.energypro.valueobject.references.EPRenRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENDepartmentRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENDepartmentRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENDepartmentTypeRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENDepartmentTypeRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkKind"
+     javaType="com.ksoe.energynet.valueobject.ENPlanWorkKind"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkKindRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENPlanWorkKindRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+<isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkState"
+     javaType="com.ksoe.energynet.valueobject.ENPlanWorkState"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:FINExecutor"
+     javaType="com.ksoe.energynet.valueobject.FINExecutor"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENMaterialsShortList"
+     javaType="com.ksoe.energynet.valueobject.lists.ENMaterialsShortList"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENMaterialsShort"
+     javaType="com.ksoe.energynet.valueobject.brief.ENMaterialsShort"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+  <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkFormRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENPlanWorkFormRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer" />
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkSourceRef"
+     javaType="com.ksoe.energynet.valueobject.references.ENPlanWorkSourceRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:RQDDSCodes"
+     javaType="com.ksoe.rqorder.valueobject.RQDDSCodes"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:RQDDSCodesRef"
+     javaType="com.ksoe.rqorder.valueobject.references.RQDDSCodesRef"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+	 <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+	     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENInvestProgramGroupsRef"
+	     javaType="com.ksoe.energynet.valueobject.references.ENInvestProgramGroupsRef"
+	     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+	     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+<isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkBillingShortList"
+     javaType="com.ksoe.energynet.valueobject.lists.ENPlanWorkBillingShortList"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+<isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkBillingShort"
+     javaType="com.ksoe.energynet.valueobject.brief.ENPlanWorkBillingShort"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+<isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:BufetOrderShort"
+     javaType="com.ksoe.energynet.valueobject.brief.BufetOrderShort"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+<isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:BufetOrderShortList"
+     javaType="com.ksoe.energynet.valueobject.lists.BufetOrderShortList"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" 
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENIPImplementationTypeRef" 
+     javaType="com.ksoe.energynet.valueobject.references.ENIPImplementationTypeRef" 
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer" 
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+
+ <isd:map encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+     xmlns:x="http://ksoe.org/EnergyproControllerService/type/" qname="x:ENPlanWorkItemShort"
+     javaType="com.ksoe.energynet.valueobject.brief.ENPlanWorkItemShort"
+     java2XMLClassName="org.apache.soap.encoding.soapenc.BeanSerializer"
+     xml2JavaClassName="org.apache.soap.encoding.soapenc.BeanSerializer"/>
+
+
+ </isd:mappings>
+</isd:service>

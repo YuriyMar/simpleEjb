@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Act21" pageWidth="793" pageHeight="566" orientation="Landscape" columnWidth="793" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" scriptletClass="com.ksoe.energynet.reports.common.FINScriptlet" isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="2"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="PcodeAkt" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[new Integer(0)]]></defaultValueExpression>
+	</parameter>
+	<parameter name="actType" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[new Integer(0)]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select numbergen , dategen , dateact , buhname ,  ename ,  invnumber , year , mm  ,
+ selperiod.datestart , selperiod.datefinal,  selperiod.departmentname
+ , selda.etype,
+(select distinct rencity from epren ep, endepartment dep, endepartment dep1, endepartment2epren deep
+ where ep.code = deep.renrefcode and deep.departmentrefcode = dep1.code and dep1.code = dep.rencode
+      and dep.code = depcode)  as rencity
+
+ from (
+select ena.numbergen , ena.dategen , ena.dateact,  enda.etype
+      , COALESCE( enda.buhname , 'Не заведено' ) as buhname
+      ,  enda.ename ,  enda.invnumber
+       , to_char(ena.dategen,'yyyy') as year
+       , case when to_char(ena.dategen,'mm') = '01' then 'Січень'
+              when to_char(ena.dategen,'mm') = '02' then 'Лютий'
+              when to_char(ena.dategen,'mm') = '03' then 'Березень'
+              when to_char(ena.dategen,'mm') = '04' then 'Квітень'
+              when to_char(ena.dategen,'mm') = '05' then 'Травень'
+              when to_char(ena.dategen,'mm') = '06' then 'Червень'
+              when to_char(ena.dategen,'mm') = '07' then 'Липень'
+              when to_char(ena.dategen,'mm') = '08' then 'Серпень'
+              when to_char(ena.dategen,'mm') = '09' then 'Вересень'
+              when to_char(ena.dategen,'mm') = '10' then 'Жовтень'
+              when to_char(ena.dategen,'mm') = '11' then 'Листопад'
+              when to_char(ena.dategen,'mm') = '12' then 'Грудень'
+            end  as mm
+      from enact ena  , enelement ene ,  enelementdata enda
+where ena.elementcode = ene.code
+  and enda.ecode = ene.code
+  and ena.code = $P{PcodeAkt}
+                 ) selda ,
+
+   				    (
+                      Select  min(enworkorder.dategen ) as datestart , max(enworkorder.dategen ) as datefinal, max(endepartment.code) as depcode
+                      , max(endepartment.shortname) as departmentname from
+                      enworkorder , enworkorder2enplanwork , enplanwork , endepartment
+                      where enworkorder.code = enworkorder2enplanwork.workordercode
+                      and enplanwork.code = enworkorder2enplanwork.plancode
+			and endepartment.code = enplanwork.departmentrefcode
+                      and enplanwork.code in
+                     (  Select  enp.code
+                      from enact ena , enact2enplanwork ena2 , enplanwork enp
+                      where ena.code = $P{PcodeAkt}
+                      and ena.code = ena2.actrefcode
+                      and ena2.plancode = enp.code )
+                      ) selperiod]]>
+	</queryString>
+	<field name="numbergen" class="java.lang.String"/>
+	<field name="dategen" class="java.sql.Date"/>
+	<field name="buhname" class="java.lang.String"/>
+	<field name="ename" class="java.lang.String"/>
+	<field name="invnumber" class="java.lang.String"/>
+	<field name="year" class="java.lang.String"/>
+	<field name="mm" class="java.lang.String"/>
+	<field name="datestart" class="java.sql.Date"/>
+	<field name="datefinal" class="java.sql.Date"/>
+	<field name="departmentname" class="java.lang.String"/>
+	<field name="etype" class="java.lang.Integer"/>
+	<field name="rencity" class="java.lang.String"/>
+	<field name="dateact" class="java.util.Date"/>
+	<variable name="backZarplataElteh" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backZarplataElteh}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="backZarplataVoditel" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backZarplataVoditel}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="backVitratiTransport" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backVitratiTransport}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="backVitratiMaterials" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backVitratiMaterials}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="koshtoris" class="java.lang.Double">
+		<variableExpression><![CDATA[new java.lang.Double( ( ($V{backZarplataElteh} != null) ? ($V{backZarplataElteh}.doubleValue()) : 0.0 )
+                   +  ( ($V{backZarplataVoditel} != null) ? ($V{backZarplataVoditel}.doubleValue()) : 0.0 )
+                   +  ( ($V{backVitratiTransport} != null) ? ($V{backVitratiTransport}.doubleValue()) : 0.0 )
+                   +  ( ($V{backVitratiMaterials} != null) ? ($V{backVitratiMaterials}.doubleValue()) : 0.0 )
+                     )]]></variableExpression>
+	</variable>
+	<variable name="naryadi" class="java.lang.String">
+		<variableExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getnaryadi($P{PcodeAkt} )]]></variableExpression>
+	</variable>
+	<variable name="b" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{b}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="vperiod" class="java.lang.String" resetType="None">
+		<variableExpression><![CDATA["Виконано робіт з " + new SimpleDateFormat("dd.MM.yyyy").format($F{datestart}).toString() + " по " +  new SimpleDateFormat("dd.MM.yyyy").format($F{datefinal}).toString()]]></variableExpression>
+		<initialValueExpression><![CDATA["Виконано робіт з " + new SimpleDateFormat("dd.MM.yyyy").format($F{datestart}).toString() + " по " +  new SimpleDateFormat("dd.MM.yyyy").format($F{datefinal}).toString()]]></initialValueExpression>
+	</variable>
+	<variable name="actTypeText" class="java.lang.String">
+		<variableExpression><![CDATA[$V{actTypeText}]]></variableExpression>
+		<initialValueExpression><![CDATA[(($P{actType}.intValue() == 1) || ($P{actType}.intValue() == 4))
+   ? "реконструкції, модернізації" :
+(
+ ($P{actType}.intValue() == 2) ? "капітального(поточного) ремонту" :
+   (
+     ($P{actType}.intValue() == 3) ? "технічного обслуговування" :
+       ($P{actType}.intValue() == 5) ? "капітального будівництва" :
+         ($P{actType}.intValue() == 6) ? "середнього ремонту" :
+           ($P{actType}.intValue() == 8) ? "доробки" :
+            ($P{actType}.intValue() == 10) ? "виробництва" :  "!!! Невідомо !!!"
+
+    )
+ )]]></initialValueExpression>
+	</variable>
+	<variable name="isDemontaj" class="java.lang.Integer">
+		<variableExpression><![CDATA[new Integer(0)]]></variableExpression>
+		<initialValueExpression><![CDATA[new Integer(0)]]></initialValueExpression>
+	</variable>
+	<variable name="countwork" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{countwork}]]></variableExpression>
+	</variable>
+	<variable name="companyShortName" class="java.lang.String">
+		<variableExpression><![CDATA[$V{companyShortName}]]></variableExpression>
+		<initialValueExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getSettings("company.shortname", $F{dategen})]]></initialValueExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="111" splitType="Stretch">
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-3" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="76" width="793" height="35" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None">
+					<font fontName="Times New Roman" size="10" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA["АКТ № " + $F{numbergen} + "\n" +
+"на списання втрат сировини та товарів " + "\n" +
+" від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р."]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" evaluationTime="Report" pattern="" isBlankWhenNull="true">
+				<reportElement key="textField-33" x="389" y="0" width="284" height="10"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Right">
+					<font fontName="Times New Roman" size="6" isItalic="false" pdfFontName="times.ttf"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{rencity}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-34" mode="Transparent" x="0" y="0" width="274" height="32" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Top" rotation="None">
+					<font fontName="Times New Roman" size="7" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{companyShortName}  + "\n" +
+"\n"+
+"        ЗАТВЕРДЖУЮ "]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-35" x="37" y="32" width="237" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-36" x="37" y="43" width="237" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-37" x="37" y="54" width="237" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-39" x="0" y="32" width="37" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Посада"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-40" x="0" y="43" width="37" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["ПІБ"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-41" x="0" y="54" width="37" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Підпис"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-42" x="37" y="65" width="183" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Right">
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-43" x="0" y="65" width="37" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Дата"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-44" x="222" y="65" width="37" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left">
+					<font fontName="Times New Roman" size="8" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["201_ р."]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="27" splitType="Prevent">
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-2" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="0" width="793" height="8"/>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="summat" toVariable="backVitratiMaterials" calculation="Sum"/>
+				<returnValue subreportVariable="summat_gsm" toVariable="b" calculation="Sum"/>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActMaterials/ActBufet/Nonerealization/Akt2_sub_materials.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-7" positionType="Float" mode="Opaque" x="0" y="17" width="793" height="10"/>
+				<subreportParameter name="actType">
+					<subreportParameterExpression><![CDATA[$P{actType}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActMaterials/ActBufet/Nonerealization/ActFooter.jasper")]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Prevent"/>
+	</summary>
+</jasperReport>

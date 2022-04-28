@@ -1,0 +1,925 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Act21" pageWidth="595" pageHeight="842" columnWidth="496" leftMargin="85" rightMargin="14" topMargin="14" bottomMargin="85" scriptletClass="com.ksoe.energynet.reports.common.FINScriptlet" isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="2"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<property name="com.jaspersoft.studio.data.sql.SQLQueryDesigner.sash.w1" value="184"/>
+	<property name="com.jaspersoft.studio.data.sql.SQLQueryDesigner.sash.w2" value="809"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="PcodeAkt" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[new Integer(0)]]></defaultValueExpression>
+	</parameter>
+	<parameter name="actType" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[new Integer(0)]]></defaultValueExpression>
+	</parameter>
+	<parameter name="docFlowConnection" class="java.lang.Object" isForPrompting="false"/>
+	<parameter name="dfDocSignerTypes" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["-1"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select numbergen , dategen , dateact , buhname ,  ename ,  invnumber , year , mm  ,
+datestart, datefinal, departmentname, etype, invnumber_byt, planworktype,
+planworkstate, isafterdate70, info_prisoed,
+/* процент общепроизводственных затрат */
+ /*case
+     when isActDateAfter01102016 = 1 then 50
+     when isActDateAfter01052014 +
+           isServicesDateAfter01052014 +
+           isTechCondDateAfter01052014 +
+           isOperativeDateAfter01052014 = 4 then 60
+      else 70 end  as productionExpencesPercent */
+/* переделал выборку процента общепроизводственных затрат на функцию 16.05.2017 */
+(select * from get_productionexpencespercent($P{PcodeAkt}))  as productionExpencesPercent
+/* процент общепроизводственных затрат */
+,
+/*SUPP-17561 наявність перевірки комплексу робіт*/
+(select
+count(hu1.code) > 0
+from
+enact as ac1
+inner join enact2enplanwork as acpw1 on ac1.code = acpw1.actrefcode
+inner join enplanwork as pw1 on acpw1.plancode = pw1.code
+inner join enplanworkitem as pi1 on pw1.code = pi1.planrefcode
+inner join enhumenitem as hu1 on pi1.code = hu1.planitemrefcode
+inner join finworker as fo1 on hu1.finworkercode = fo1.code
+where
+pw1.typerefcode = 7 /*Приєднання*/
+and hu1.countfact > 0
+and pi1.countgen > 0
+and pi1.kartarefcode in (2017017496
+,2017017494
+,2017017495)
+and ac1.code = $P{PcodeAkt}
+) as is_checking_works
+,enconnectionkind
+, case when $P{PcodeAkt}  = 1018406426 then
+'Дог.№ 1092261 від 29.05.2018/Дог. з ФК.№ 67106 від 29.05.2018' ||
+'Предмет договору: Будівництво сонячної електростанції потужністю 7 МВт' ||
+'в межах Виноградівської сільської ради Олешківського р-ну Херсонської області (3 черга будівництва),' ||
+'Дог.№ 1099445 від 16.04.2018/Дог. з ФК.№ 66321 від 16.04.2018' ||
+'Предмет договору: Будівництво сонячної електростанції потужністю 7 МВт' ||
+'в межах Виноградівської сільської ради Олешківського р-ну Херсонської області (4 черга будівництва)'  else serv_info end as serv_info
+ , projectcipher
+ , projectname
+ , investinfo
+
+ , (select a2d.dfdoccode from enact2dfdoc a2d where a2d.actrefcode = $P{PcodeAkt} order by a2d.code desc limit 1) as doccode
+
+from
+(select numbergen , dategen , dateact , buhname ,  ename ,  invnumber , year , mm  ,
+ selperiod.datestart , selperiod.datefinal,  selperiod.departmentname, etype,
+ selda.invnumber_byt
+, planworktype
+, planworkstate
+/*Если дата акта больше чем 01 октября 2016*/
+, case when  dategen >= to_date('01.10.2016','dd.mm.yyyy')  then 1 else 0 end  as isActDateAfter01102016
+/* если дата акта больше чем 01,05,2012 значит признак делаем для того что бы можно было накидывать 70 процентов общепроизв*/
+, case when  dategen >= to_date('01.05.2012','dd.mm.yyyy')  then 1 else 0 end  as isafterdate70
+, coalesce((Select distinct 'Дог.№ '||tcs.fincontractnumber||' від ' ||to_char(tcs.fincontractdate,'dd.mm.yyyy')
+|| ' ' || ( select group_concat(ct.contragentname,',') from ENCONTRAGENT ct where ct.techcondservicesrefcod = tcs.code ) as info_prisoed
+from ENTECHCOND2PLANWORK tc2pl  , ENTECHCONDITIONSSERVCS tcs
+where tc2pl.planrefcode in (
+select a2p.plancode from enact2enplanwork a2p
+where a2p.actrefcode = $P{PcodeAkt})
+and tcs.code = tc2pl.techconservicesrefcode
+limit 1 ),' ') as info_prisoed,
+/* вычисление процента общепроизводственных затрат */
+ case when dategen >= to_date('01.05.2014','dd.MM.yyyy') then 1
+  else 0 end  as isActDateAfter01052014,
+coalesce((select case when tcs.contractdate  >= to_date('01.05.2014','dd.MM.yyyy') then 1
+else 0 end
+from ENTECHCOND2PLANWORK tc2pl  , ENTECHCONDITIONSSERVCS tcs
+where tc2pl.planrefcode in (
+select a2p.plancode from enact2enplanwork a2p
+where a2p.actrefcode = $P{PcodeAkt})
+and tcs.code = tc2pl.techconservicesrefcode
+limit 1
+),1) as isTechCondDateAfter01052014,
+coalesce((select case when contractdate >= to_date('01.05.2014','dd.MM.yyyy') then 1
+else 0 end from enservicesobject
+where enservicesobject.elementcode = (select elementcode from enact where code = $P{PcodeAkt})),1)
+ as isServicesDateAfter01052014,
+coalesce((select case when contractdate >= to_date('01.05.2014','dd.MM.yyyy') then 1
+else 0 end from enoperativeobject
+where enoperativeobject.elementcode = (select elementcode from enact where code = $P{PcodeAkt})),1)
+ as isOperativeDateAfter01052014
+/* вычисление процента общепроизводственных затрат */
+, (select  ck.name from
+        enservicesobject2techcondtnsservices so2tc,
+        entechconditionsservcs tc, enconnectionkind ck
+        where so2tc.techcondservrefcode = tc.code
+        and tc.connectionkindrefcode = ck.code
+        and tc.code in ( select t2p.techconservicesrefcode from enact2enplanwork a2p , entechcond2planwork t2p
+                         where a2p.actrefcode = selda.actcode
+                         and a2p.plancode=t2p.planrefcode) limit 1 ) as enconnectionkind
+ , coalesce((Select distinct 'Дог.№ '||so.contractnumberservices ||' від ' ||to_char(so.contractdateservices,'dd.mm.yyyy')
+|| '/' || 'Дог. з ФК.№ '||so.contractnumber ||' від ' ||to_char(so.contractdate,'dd.mm.yyyy')  || ' Предмет договору: ' ||  so.commentservicesgen as serv_info
+from enservicesobject so  , enservices2plan so2p
+where so.code = so2p.servicesobjectrefcode
+and so2p.planrefcode in (
+select a2p.plancode from enact2enplanwork a2p
+where a2p.actrefcode = $P{PcodeAkt})),'')  as serv_info
+, (select pp.projectcipher  from enplanproject pp where pp.planrefcode in (
+select * from net.get_codemonthplan_byanycodeplan(   (Select  ena2.plancode::integer
+										                      from  enact2enplanwork ena2
+										                      where ena2.actrefcode = $P{PcodeAkt} limit 1  ) )
+order by pp.code limit 1 ) ) as projectcipher
+, (select pp.projectname  from enplanproject pp where pp.planrefcode in (
+select * from net.get_codemonthplan_byanycodeplan(   (Select  ena2.plancode::integer
+										                      from  enact2enplanwork ena2
+										                      where ena2.actrefcode = $P{PcodeAkt} limit 1  ) )
+order by pp.code limit 1 ) ) as projectname
+
+
+, (
+Select  max(COALESCE(investinfo))  as investinfo  from (
+Select  ip.yeargen ||'р. '|| x."name" || ' пункт ' || i.itemnumber  as investinfo
+ from
+ enipitem2plan i2p, enipitem i , enplanwork pw , eninvestprogramgroups x , enip ip ,
+ (
+ select (select * from get_codemonthplan_byanycodeplan(a2p.plancode::numeric)) as codemonthplan  , a2p.plancode as codefactplan
+ from enplanwork pp , enact2enplanwork a2p, enact a
+ where pp.code = a2p.plancode
+ and a2p.actrefcode=a.code
+ and a2p.actrefcode=$P{PcodeAkt} ) as q1
+  where pw.code = q1.codemonthplan
+  and i2p.planrefcode = pw.code
+  and i2p.ipitemrefcode = i.code
+  and i.invgrouprefcode = x.code
+  and i.iprefcode = ip.code
+
+  UNION ALL
+Select pw.yeargen||'р. '|| x."name" || ' пункт ' || pw.investitemnumber  as investinfo
+ from
+  enplanwork pw , eninvestprogramgroups x ,
+ (
+ select (select * from get_codemonthplan_byanycodeplan(a2p.plancode::numeric)) as codemonthplan  , a2p.plancode as codefactplan
+ from enplanwork pp , enact2enplanwork a2p, enact a
+ where pp.code = a2p.plancode
+ and a2p.actrefcode=a.code
+ and a2p.actrefcode = $P{PcodeAkt} ) as q1
+  where pw.code = q1.codemonthplan
+  and pw.invgrouprefcode = x.code
+  and pw.code not in ( select ip.planrefcode from enipitem2plan ip where ip.planrefcode = pw.code  )
+ ) q7
+ ) investinfo
+
+
+ from (
+select ena.numbergen , ena.dategen , ena.dateact,  enda.etype
+      , COALESCE( enda.buhname , 'Не заведено' ) as buhname
+      ,  enda.ename ,  enda.invnumber
+       , to_char(ena.dategen,'yyyy') as year
+       , case when to_char(ena.dategen,'mm') = '01' then 'Січень'
+              when to_char(ena.dategen,'mm') = '02' then 'Лютий'
+              when to_char(ena.dategen,'mm') = '03' then 'Березень'
+              when to_char(ena.dategen,'mm') = '04' then 'Квітень'
+              when to_char(ena.dategen,'mm') = '05' then 'Травень'
+              when to_char(ena.dategen,'mm') = '06' then 'Червень'
+              when to_char(ena.dategen,'mm') = '07' then 'Липень'
+              when to_char(ena.dategen,'mm') = '08' then 'Серпень'
+              when to_char(ena.dategen,'mm') = '09' then 'Вересень'
+              when to_char(ena.dategen,'mm') = '10' then 'Жовтень'
+              when to_char(ena.dategen,'mm') = '11' then 'Листопад'
+              when to_char(ena.dategen,'mm') = '12' then 'Грудень'
+            end  as mm,
+		ena.invnumber as invnumber_byt
+, (select  p.typerefcode from enact2enplanwork a2p  , enplanwork p where a2p.plancode = p.code and a2p.actrefcode = ena.code  limit 1   ) as planworktype
+, (select  p.staterefcode from enact2enplanwork a2p  , enplanwork p where a2p.plancode = p.code and a2p.actrefcode = ena.code  limit 1   ) as planworkstate
+ , ena.elementcode   , ena.code as actcode   from enact ena  , enelement ene ,  enelementdata enda
+
+where ena.elementcode = ene.code
+  and enda.ecode = ene.code
+  and ena.code = $P{PcodeAkt}
+                 ) selda ,
+   				    (
+                      Select  min(enworkorder.dategen ) as datestart , max(enworkorder.dategen ) as datefinal, max(endepartment.code) as depcode
+                      , max(endepartment.shortname) as departmentname from
+                      enworkorder , enworkorder2enplanwork , enplanwork , endepartment
+                      where enworkorder.code = enworkorder2enplanwork.workordercode
+                      and enplanwork.code = enworkorder2enplanwork.plancode
+			and endepartment.code = enplanwork.departmentrefcode
+                      and enplanwork.code in
+                     (  Select  enp.code
+                      from enact ena , enact2enplanwork ena2 , enplanwork enp
+                      where ena.code = $P{PcodeAkt}
+                      and ena.code = ena2.actrefcode
+                      and ena2.plancode = enp.code )
+                      ) selperiod
+limit 1
+) as qwe]]>
+	</queryString>
+	<field name="numbergen" class="java.lang.String"/>
+	<field name="dategen" class="java.sql.Date"/>
+	<field name="buhname" class="java.lang.String"/>
+	<field name="ename" class="java.lang.String"/>
+	<field name="invnumber" class="java.lang.String"/>
+	<field name="year" class="java.lang.String"/>
+	<field name="mm" class="java.lang.String"/>
+	<field name="datestart" class="java.sql.Date"/>
+	<field name="datefinal" class="java.sql.Date"/>
+	<field name="departmentname" class="java.lang.String"/>
+	<field name="etype" class="java.lang.Integer"/>
+	<field name="dateact" class="java.util.Date"/>
+	<field name="invnumber_byt" class="java.lang.String"/>
+	<field name="planworktype" class="java.lang.Integer"/>
+	<field name="planworkstate" class="java.lang.Integer"/>
+	<field name="isafterdate70" class="java.lang.Integer"/>
+	<field name="info_prisoed" class="java.lang.String"/>
+	<field name="productionExpencesPercent" class="java.math.BigDecimal"/>
+	<field name="is_checking_works" class="java.lang.Boolean"/>
+	<field name="enconnectionkind" class="java.lang.String"/>
+	<field name="serv_info" class="java.lang.String"/>
+	<field name="projectname" class="java.lang.String"/>
+	<field name="investinfo" class="java.lang.String"/>
+	<field name="doccode" class="java.lang.Integer"/>
+	<variable name="backZarplataElteh" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backZarplataElteh}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="backZarplataVoditel" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backZarplataVoditel}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="backVitratiTransport" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backVitratiTransport}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="backVitratiMaterials" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backVitratiMaterials}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="koshtoris" class="java.lang.Double">
+		<variableExpression><![CDATA[new java.lang.Double( ( ($V{backZarplataElteh} != null) ? ($V{backZarplataElteh}.doubleValue()) : 0.0 )
+                   +  ( ($V{backZarplataVoditel} != null) ? ($V{backZarplataVoditel}.doubleValue()) : 0.0 )
+                   +  ( ($V{backVitratiTransport} != null) ? ($V{backVitratiTransport}.doubleValue()) : 0.0 )
+                   +  ( ($V{backVitratiMaterials} != null) ? ($V{backVitratiMaterials}.doubleValue()) : 0.0 )
+                     )]]></variableExpression>
+	</variable>
+	<variable name="naryadi" class="java.lang.String">
+		<variableExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getnaryadi($P{PcodeAkt} )]]></variableExpression>
+	</variable>
+	<variable name="b" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{b}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="vperiod" class="java.lang.String" resetType="None">
+		<variableExpression><![CDATA["Виконано робіт з " + new SimpleDateFormat("dd.MM.yyyy").format($F{datestart}).toString() + " по " +  new SimpleDateFormat("dd.MM.yyyy").format($F{datefinal}).toString()]]></variableExpression>
+		<initialValueExpression><![CDATA["Виконано робіт з " + new SimpleDateFormat("dd.MM.yyyy").format($F{datestart}).toString() + " по " +  new SimpleDateFormat("dd.MM.yyyy").format($F{datefinal}).toString()]]></initialValueExpression>
+	</variable>
+	<variable name="actTypeText" class="java.lang.String">
+		<variableExpression><![CDATA[$V{actTypeText}]]></variableExpression>
+		<initialValueExpression><![CDATA[(($P{actType}.intValue() == 1) || ($P{actType}.intValue() == 4))
+   ? "реконструкції, модернізації" :
+($F{planworkstate}.intValue() == 4) ? "капітального будівництва" :
+(
+ ($P{actType}.intValue() == 2) ? "капітального(поточного) ремонту" :
+   (
+     (java.lang.Math.abs($P{actType}.intValue()) == 3) ? "технічного обслуговування" :
+       ($P{actType}.intValue() == 5) ? "капітального будівництва" :
+         ($P{actType}.intValue() == 6) ? "середнього ремонту" :
+           ($P{actType}.intValue() == 8) ? "доробки" :
+            ($P{actType}.intValue() == 7) ? "роботи на сторону" :
+( $P{actType}.intValue() == 14 ? "з узгодження схеми обліку електроенергії" :
+  $P{actType}.intValue() == 29 ? $F{projectname} != null ? $F{projectname} : " з проектування " :
+  $P{actType}.intValue() == 22 ? " з доробки по договорам підряду " : "!!! Невідомо !!!")
+
+    )
+ )]]></initialValueExpression>
+	</variable>
+	<variable name="isDemontaj" class="java.lang.Integer">
+		<variableExpression><![CDATA[new Integer(0)]]></variableExpression>
+		<initialValueExpression><![CDATA[new Integer(0)]]></initialValueExpression>
+	</variable>
+	<variable name="kodzatrat" class="java.lang.String">
+		<variableExpression><![CDATA[$F{invnumber} != null ? (
+            (( $P{actType}.intValue() == 1 )
+	  || ( $P{actType}.intValue() == 2 )
+	  || ( $P{actType}.intValue() == 3 )
+	  || ( $P{actType}.intValue() == 19 )
+	  || ( $P{actType}.intValue() == 4 ) ) ?
+((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getKodZatrat($F{invnumber})
+: " " )
+: " "]]></variableExpression>
+		<initialValueExpression><![CDATA[new String("")]]></initialValueExpression>
+	</variable>
+	<variable name="signnalog" class="java.lang.String">
+		<variableExpression><![CDATA[$F{invnumber} != null ? (
+            (( $P{actType}.intValue() == 1 )
+	  || ( $P{actType}.intValue() == 2 )
+	  || ( $P{actType}.intValue() == 3 )
+	  || ( $P{actType}.intValue() == 19 )
+	  || ( $P{actType}.intValue() == 4 ) ) ?
+$F{invnumber} != null ? (
+            (( $P{actType}.intValue() == 1 )
+	  || ( $P{actType}.intValue() == 2 )
+	  || ( $P{actType}.intValue() == 3 )
+	  || ( $P{actType}.intValue() == 19 )
+	  || ( $P{actType}.intValue() == 4 ) ) ?
+/*NET-2665 Если код источника прихода основного = 20, 21, 22 и код затрат содержит 232, 91, 92, то
+вместо налог/неналог выводится "безвозмездно полученные" */
+( (((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getKodIst($F{invnumber}).equals("20")
+|| ((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getKodIst($F{invnumber}).equals("21")
+|| ((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getKodIst($F{invnumber}).equals("22"))
+&& (
+((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getKodZatrat($F{invnumber}).substring(0,3).equals("232")
+|| ((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getKodZatrat($F{invnumber}).substring(0,2).equals("91")
+|| ((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getKodZatrat($F{invnumber}).substring(0,2).equals("92")
+) ?
+"безвозмездно полученные"
+: ((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getSignNalog($F{invnumber}) )
+: " " )
+: " "
+: " " )
+: " "]]></variableExpression>
+		<initialValueExpression><![CDATA[new String("")]]></initialValueExpression>
+	</variable>
+	<variable name="personalacc" class="java.lang.String">
+		<variableExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getcommentzku($P{PcodeAkt} )]]></variableExpression>
+	</variable>
+	<variable name="OnlyzarplataByWorker" class="java.math.BigDecimal" resetType="None" calculation="Sum">
+		<variableExpression><![CDATA[$V{OnlyzarplataByWorker}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="OnlyzarplataByWorkerDriver" class="java.math.BigDecimal" resetType="None" calculation="Sum">
+		<variableExpression><![CDATA[$V{OnlyzarplataByWorkerDriver}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="sumMaterialAfterRefined" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getSumRefined($P{PcodeAkt} )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="sumMaterialBeforeRefined" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getSumBeforeRefined($P{PcodeAkt} )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="backVitratiOborud" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{backVitratiTransport}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="isNeededAdministrativeCosts" class="java.lang.Boolean">
+		<variableExpression><![CDATA[new Boolean(
+
+($F{isafterdate70}.intValue() == 1) &&
+(
+($F{planworkstate}.intValue() == 4 && $F{planworktype}.intValue() == 7)
+||
+($F{planworkstate}.intValue() == 2 && $F{planworktype}.intValue() == 7)
+||
+($F{planworkstate}.intValue() == 2 && $F{planworktype}.intValue() == 23)
+||
+($F{planworkstate}.intValue() == 2 && $F{planworktype}.intValue() == 115)
+||
+($F{etype}.intValue() == 22)
+||
+($F{planworkstate}.intValue() == 29 && $F{planworktype}.intValue() != 5 )
+||
+($F{planworkstate}.intValue() == 40)
+)
+)]]></variableExpression>
+		<initialValueExpression><![CDATA[new Boolean(false)]]></initialValueExpression>
+	</variable>
+	<variable name="companyShortName" class="java.lang.String">
+		<variableExpression><![CDATA[$V{companyShortName}]]></variableExpression>
+		<initialValueExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getSettings("company.shortname", $F{dategen})]]></initialValueExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band height="110" splitType="Stretch">
+			<printWhenExpression><![CDATA[$V{REPORT_COUNT}==0]]></printWhenExpression>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-24" mode="Transparent" x="0" y="0" width="150" height="32" forecolor="#000000" backcolor="#FFFFFF">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Top" rotation="None">
+					<font fontName="Times New Roman" size="7" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{companyShortName}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" evaluationTime="Report" isBlankWhenNull="true">
+				<reportElement key="textField-10" mode="Transparent" x="200" y="0" width="295" height="110" isPrintWhenDetailOverflows="true" forecolor="#000000" backcolor="#FFFFFF">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Top" rotation="None">
+					<font fontName="Times New Roman" size="7" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{planworkstate}.intValue() == 40 ?
+new String(" Найменування об`єкту: " + $F{ename} + "\n" +
+$F{serv_info} + "\n" +
+" Інв.ном: " + $F{invnumber} + "\n" +
+" Наряд: " + $V{naryadi} + "\n" +
+"Кошторисна вартість: " + ($V{backVitratiMaterials}.
+/*SUPP-62075 Округление зарплаты для того, чтобы
+суммы по акту не расходились на копейки*/
+add($V{backZarplataElteh}.setScale(2, BigDecimal.ROUND_HALF_UP)).
+add($V{backZarplataVoditel}.setScale(2, BigDecimal.ROUND_HALF_UP)).
+add($V{backVitratiTransport}).
+add($V{backVitratiOborud}).
+add(
+ ($V{isNeededAdministrativeCosts}) ? ((($V{OnlyzarplataByWorker} == null ? new BigDecimal(0) : $V{OnlyzarplataByWorker} ).add($V{OnlyzarplataByWorkerDriver} != null ? $V{OnlyzarplataByWorkerDriver} : new BigDecimal(0) )).multiply($F{productionExpencesPercent}).divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP)) : new BigDecimal(0) )
+).setScale(2, BigDecimal.ROUND_HALF_UP) + " грн.") :
+(
+(
+( $P{actType}.intValue() != 9 ) ?
+(($P{actType}.intValue() == 8) ?
+" Найменування об`єкту  " +  $F{buhname} + " " + "\n" + " ном. № " + $F{invnumber} + "\n" +
+/*NET-3510*/"Наряд  " + $V{naryadi} + "\n" +
+( $P{actType}.intValue() == 8 ? "вартість "+$V{sumMaterialBeforeRefined}.setScale(2, BigDecimal.ROUND_HALF_UP)+" грн." : "вартість               грн." ) +
+"\n" + "Загальна кошторисна вартість : " + ($V{backVitratiMaterials}.add($V{backZarplataElteh}).add($V{backZarplataVoditel}).add($V{backVitratiTransport})).setScale(2, BigDecimal.ROUND_HALF_UP) + " грн."
+:
+" Найменування об`єкту  " + new String(($F{etype}.intValue() == 12 || $F{etype}.intValue() == 15) ? $F{ename} : $F{buhname}) + " " + "\n" +
+ ( ( $P{actType}.intValue() != 11 ) ? ( ($P{actType}.intValue() != -3) ? ( " Інв.ном " + $F{invnumber}) : ( " Особовий рахунок " + $F{invnumber}) ) : ( " Договір № " + $F{invnumber} ))
++ (( $P{actType}.intValue() == -3 ) ? "\n" + " Інв. ном: " + $F{invnumber_byt} : "")
++ "\n" + " Наряд  " + $V{naryadi} + "\n" +
+( (($P{actType}.intValue() == 4)&&($F{etype}.intValue()==2))  ? " Особ.Рах.-" + $V{personalacc} + "\n" : "") +
+(( $P{actType}.intValue() == 1 ) ?  " Договірна ціна : _______________" :
+ " Кошторисна вартість : " + ($V{backVitratiMaterials}.
+/*SUPP-62075 Округление зарплаты для того, чтобы
+суммы по акту не расходились на копейки*/
+add($V{backZarplataElteh}.setScale(2, BigDecimal.ROUND_HALF_UP)).
+add($V{backZarplataVoditel}.setScale(2, BigDecimal.ROUND_HALF_UP)).
+add($V{backVitratiTransport}).
+add($V{backVitratiOborud}).
+add(
+ ($V{isNeededAdministrativeCosts}) ? ((($V{OnlyzarplataByWorker} == null ? new BigDecimal(0) : $V{OnlyzarplataByWorker} ).add($V{OnlyzarplataByWorkerDriver} != null ? $V{OnlyzarplataByWorkerDriver} : new BigDecimal(0) )).multiply($F{productionExpencesPercent}).divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP)) : new BigDecimal(0) )
+).setScale(2, BigDecimal.ROUND_HALF_UP) + " грн."
+
+)
++ /*код затрат если реконструкц(1) , Кр(2), ТО(3), демонтаж(19), текущ ремонт(2)*/
+  (
+    (    ( $P{actType}.intValue() == 1 )
+	  || ( $P{actType}.intValue() == 2 )
+	  || ( $P{actType}.intValue() == 3 )
+	  || ( $P{actType}.intValue() == 19 )
+	  || ( $P{actType}.intValue() == 4 )
+	 ) ? "\n" + " Код : " +  $V{kodzatrat} +
+             "\n" + " Ознака : " +  $V{signnalog} : ""
+  )
+/*+ (( $P{actType}.intValue() == 1 ) ? "\n" + "Договір " : "")*/
+)
+: (" Додаток № 7 до Наказу №____ від__________" + "\n" +
+   " Замовник: " + "\n" +
+   " Підрядчик: " + $V{companyShortName} + " ( " + $F{departmentname} + " ) " + "\n"+
+   " Договір № ____ від ___________"  )
+)
+ + new String( ($F{planworktype}.intValue() == 7 || $F{planworktype}.intValue() == 22) ? "\n"+ new String($F{info_prisoed}) : "")
+ + ($F{enconnectionkind} == null ? " " : "\n Тип приєднання : "+ $F{enconnectionkind} + " " + "\n")
+ )
++ /*SUPP-86663*/ new String( ($F{planworkstate}.intValue() == 29 && $F{planworktype}.intValue() == 5 ) ? " \n Інвестиційна програма " : " " )
++  new String( ( $F{investinfo} != null  && !$F{investinfo}.equals("") && $F{planworktype}.intValue() == 5 ) ? " \n Інвестиційна програма " + $F{investinfo} :  " " )]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="50" splitType="Stretch">
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-3" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="0" width="496" height="20" isPrintWhenDetailOverflows="true" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None">
+					<font fontName="Times New Roman" size="10" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{planworkstate}.intValue() == 40) ? new String(
+"АКТ № " + $F{numbergen} + "\n" +
+"приймання виконаних робіт з реконструкції, модернізації (робіт на сторону) " + "\n" +
+  " від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р.") : (
+
+( $F{planworktype}.intValue() == 22  ) ?
+ ( "АКТ № " + $F{numbergen} + "\n" +
+"приймання виконаних робіт з "+ $V{actTypeText}+"   " + "\n" +
+  " від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р."
+ + new String(($F{invnumber}.length() == 0) ? " (будівництво) " : " (реконструкція) " ) )   :
+(
+( $P{actType}.intValue() == 19 ) ? (" АКТ № " + $F{numbergen} + "\n" +
+  " виконаних робіт з Демонтажу " + "\n" +
+  " від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р.")  :
+( $P{actType}.intValue() == 11 ) ? (" АКТ № " + $F{numbergen} + "\n" +
+  " виконаних робіт з Вимірювання та випробування " + "\n" +
+  " від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р.")  :
+(
+( $P{actType}.intValue() != 9 ) ? (
+"АКТ № " + $F{numbergen} + "\n" +
+"приймання виконаних робіт з "+ $V{actTypeText}+"   " + "\n" +
+  " від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р.")
+:
+
+( " АКТ № " + $F{numbergen} + "\n" +
+  " виконаних робіт з підготовки та видачі технічних умов " + "\n" +
+  " від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р." )
+)
+)
+)]]></textFieldExpression>
+			</textField>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-1" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="30" width="496" height="20" isPrintWhenDetailOverflows="true"/>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/Akt2_sub_work.jasper")]]></subreportExpression>
+			</subreport>
+		</band>
+		<band height="95">
+			<textField evaluationTime="Report">
+				<reportElement x="0" y="5" width="495" height="15">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<textElement>
+					<font fontName="Times New Roman" size="10" isBold="true" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Всього витрати по матеріалам : " + ($V{backVitratiMaterials}).setScale(2, BigDecimal.ROUND_HALF_UP) + "грн."]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="0" y="20" width="495" height="15"/>
+				<textElement>
+					<font fontName="Times New Roman" size="10" isBold="true" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["В тому числі ПММ : " + ($V{b}).setScale(2, BigDecimal.ROUND_HALF_UP) + "грн."]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="0" y="35" width="495" height="15"/>
+				<textElement>
+					<font fontName="Times New Roman" size="10" isBold="true" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Всього по заробітній платі : " + ($V{backZarplataElteh}.add($V{backZarplataVoditel})).setScale(2, BigDecimal.ROUND_HALF_UP) + " грн."]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="0" y="50" width="495" height="15"/>
+				<textElement>
+					<font fontName="Times New Roman" size="10" isBold="true" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Всього транспортні витрати : " + ($V{backVitratiTransport}).setScale(2, BigDecimal.ROUND_HALF_UP) + " грн."]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="0" y="65" width="495" height="15"/>
+				<textElement>
+					<font fontName="Times New Roman" size="10" isBold="true" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Всього амортизація обладнання : " + ($V{backVitratiOborud}).setScale(2, BigDecimal.ROUND_HALF_UP) + " грн."]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="0" y="80" width="495" height="15"/>
+				<textElement>
+					<font fontName="Times New Roman" size="10" isBold="true" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Всього вартість : " + ($V{backVitratiMaterials}.add($V{backZarplataElteh}).add($V{backZarplataVoditel}).add($V{backVitratiTransport}).add($V{backVitratiOborud})).
+add(
+ ($V{isNeededAdministrativeCosts}) ? (( ( $V{OnlyzarplataByWorker} != null ? $V{OnlyzarplataByWorker} : new BigDecimal(0) ) .add($V{OnlyzarplataByWorkerDriver} != null ? $V{OnlyzarplataByWorkerDriver} : new BigDecimal(0) )).multiply($F{productionExpencesPercent}).divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP)) : new BigDecimal(0) ).setScale(2, BigDecimal.ROUND_HALF_UP) + " грн."]]></textFieldExpression>
+			</textField>
+		</band>
+		<band height="197" splitType="Stretch">
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-2" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="0" width="496" height="26">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="summat" toVariable="backVitratiMaterials" calculation="Sum"/>
+				<returnValue subreportVariable="summat_gsm" toVariable="b" calculation="Sum"/>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/Akt2_sub_materials.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-2" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="26" width="496" height="23">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/Akt2_sub_customer_materials.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-3" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="49" width="496" height="23" isRemoveLineWhenBlank="true">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="qq" toVariable="isDemontaj" calculation="Sum"/>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/Akt2_sub_demontaj.jasper")]]></subreportExpression>
+			</subreport>
+			<textField isStretchWithOverflow="true" evaluationTime="Report" isBlankWhenNull="false">
+				<reportElement key="textField-4" positionType="Float" mode="Opaque" x="0" y="72" width="496" height="23" forecolor="#000000" backcolor="#FFFFFF">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					<property name="com.jaspersoft.studio.unit.y" value="px"/>
+					<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				</reportElement>
+				<box>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None">
+					<font fontName="Times New Roman" size="10" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[(( $V{isDemontaj}.intValue() != 0 ) ? "4" : "3" ) + ". Інші витрати "]]></textFieldExpression>
+			</textField>
+			<subreport>
+				<reportElement key="subreport-4" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="95" width="496" height="23">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="isElPersonal">
+					<subreportParameterExpression><![CDATA[new Integer(1)]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="dategen">
+					<subreportParameterExpression><![CDATA[$F{dategen}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="backZarplataElteh" toVariable="backZarplataElteh" calculation="Sum"/>
+				<returnValue subreportVariable="backZarplataWithoutWithholdings" toVariable="OnlyzarplataByWorker" calculation="Sum"/>
+				<subreportExpression><![CDATA[/*getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVW2_var2_Sitog_teh_obsl/Akt2_sub_zarpelpersonal.jasper")*/
+getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/Akt2_sub_zarppersonal.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-5" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="118" width="496" height="23">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="isElPersonal">
+					<subreportParameterExpression><![CDATA[new Integer(2)]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="dategen">
+					<subreportParameterExpression><![CDATA[$F{dategen}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="backZarplataElteh" toVariable="backZarplataVoditel" calculation="Sum"/>
+				<returnValue subreportVariable="backZarplataWithoutWithholdings" toVariable="OnlyzarplataByWorkerDriver" calculation="Sum"/>
+				<subreportExpression><![CDATA[/*getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVW2_var2_Sitog_teh_obsl/Akt2_sub_zarpelpersonal.jasper")*/
+getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/Akt2_sub_zarppersonal.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-6" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="164" width="496" height="16">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<printWhenExpression><![CDATA[new Boolean($F{etype}.intValue() != 24)]]></printWhenExpression>
+				</reportElement>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="InDateAkt">
+					<subreportParameterExpression><![CDATA[$F{dategen}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="n">
+					<subreportParameterExpression><![CDATA[(( $V{isDemontaj}.intValue() != 0 ) ? "5" : "4" )]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="allVitranaTransport" toVariable="backVitratiTransport" calculation="Sum"/>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/Akt2_sub_transport.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-8" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="180" width="496" height="16">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<printWhenExpression><![CDATA[new Boolean($F{etype}.intValue() == 24)]]></printWhenExpression>
+				</reportElement>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="InDateAkt">
+					<subreportParameterExpression><![CDATA[$F{dategen}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="allVitranaTransport" toVariable="backVitratiOborud" calculation="Sum"/>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActPreproduction/Akt2_sub_transport.jasper")]]></subreportExpression>
+			</subreport>
+			<frame>
+				<reportElement positionType="Float" isPrintRepeatedValues="false" x="0" y="141" width="496" height="23"/>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false">
+					<reportElement key="textField-9" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="0" width="444" height="15"/>
+					<box>
+						<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="true" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA["РАЗОМ зарплата : "]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" evaluationTime="Report" pattern="###0.00" isBlankWhenNull="true">
+					<reportElement key="textField-5" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="444" y="0" width="51" height="15" forecolor="#000000" backcolor="#FFFFFF">
+						<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{backZarplataElteh}.add($V{backZarplataVoditel})]]></textFieldExpression>
+				</textField>
+			</frame>
+		</band>
+		<band height="32" splitType="Stretch">
+			<printWhenExpression><![CDATA[$V{isNeededAdministrativeCosts}]]></printWhenExpression>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="false">
+				<reportElement key="textField-37" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="0" width="496" height="16" isPrintWhenDetailOverflows="true">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<printWhenExpression><![CDATA[$V{isNeededAdministrativeCosts}]]></printWhenExpression>
+				</reportElement>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+					<font fontName="Times New Roman" size="8" isBold="true" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Загальновиробничі витрати"]]></textFieldExpression>
+			</textField>
+			<frame>
+				<reportElement positionType="Float" isPrintRepeatedValues="false" x="0" y="16" width="496" height="16">
+					<property name="com.jaspersoft.studio.unit.y" value="px"/>
+				</reportElement>
+				<textField isStretchWithOverflow="true" evaluationTime="Report" pattern="###0.00" isBlankWhenNull="true">
+					<reportElement key="textField-36" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="395" y="1" width="100" height="15" isPrintWhenDetailOverflows="true" forecolor="#000000" backcolor="#FFFFFF">
+						<property name="com.jaspersoft.studio.unit.width" value="px"/>
+						<printWhenExpression><![CDATA[$V{isNeededAdministrativeCosts}]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[(($V{OnlyzarplataByWorker} == null ? new BigDecimal(0) : $V{OnlyzarplataByWorker} ).add($V{OnlyzarplataByWorkerDriver} != null ? $V{OnlyzarplataByWorkerDriver} : new BigDecimal(0) )).multiply($F{productionExpencesPercent}).divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" evaluationTime="Report" isBlankWhenNull="false">
+					<reportElement key="textField-35" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="1" width="395" height="15" isPrintWhenDetailOverflows="true">
+						<property name="com.jaspersoft.studio.unit.width" value="px"/>
+						<printWhenExpression><![CDATA[$V{isNeededAdministrativeCosts}]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="true" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Загальновиробничі витрати " + $F{productionExpencesPercent} + "% від суми заробітної плати"
++ ( $F{is_checking_works} ? " (в т.ч. витрати на перевірку комплексу робіт)" : "" )]]></textFieldExpression>
+				</textField>
+			</frame>
+		</band>
+		<band height="42" splitType="Stretch">
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="false">
+				<reportElement key="textField-21" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="15" width="496" height="23" isPrintWhenDetailOverflows="true"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+					<font fontName="Times New Roman" size="8" isBold="true" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($P{actType}.intValue() == 8) ? "Вартість після доробки                                                                                                  "  +$V{sumMaterialAfterRefined}.setScale(2, BigDecimal.ROUND_HALF_UP) +  "грн." : ""]]></textFieldExpression>
+			</textField>
+			<frame>
+				<reportElement positionType="Float" isPrintRepeatedValues="false" x="-1" y="0" width="496" height="15">
+					<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				</reportElement>
+				<textField isStretchWithOverflow="true" evaluationTime="Report" pattern="" isBlankWhenNull="true">
+					<reportElement key="textField-6" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="444" y="0" width="51" height="15" isPrintWhenDetailOverflows="true" forecolor="#000000" backcolor="#FFFFFF">
+						<property name="com.jaspersoft.studio.unit.width" value="px"/>
+						<property name="com.jaspersoft.studio.unit.x" value="px"/>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA["" + (($V{backVitratiMaterials}.
+/*SUPP-62075 Округление зарплаты для того, чтобы
+суммы по акту не расходились на копейки*/
+add($V{backZarplataElteh}.setScale(2, BigDecimal.ROUND_HALF_UP)).
+add($V{backZarplataVoditel}.setScale(2, BigDecimal.ROUND_HALF_UP)).
+add($V{backVitratiTransport}).
+add($V{backVitratiOborud}).
+add(
+ ($V{isNeededAdministrativeCosts}) ? ((($V{OnlyzarplataByWorker} == null ? new BigDecimal(0) : $V{OnlyzarplataByWorker} ).add($V{OnlyzarplataByWorkerDriver} != null ? $V{OnlyzarplataByWorkerDriver} : new BigDecimal(0) )).multiply($F{productionExpencesPercent}).divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP)) : new BigDecimal(0) )
+).setScale(2, BigDecimal.ROUND_HALF_UP))]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-7" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="0" width="444" height="15" isPrintWhenDetailOverflows="true">
+						<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="true" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA["ВСЬОГО ПО АКТУ  :"]]></textFieldExpression>
+				</textField>
+			</frame>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band height="23" splitType="Prevent">
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-7" positionType="Float" isPrintRepeatedValues="false" mode="Opaque" x="0" y="0" width="496" height="23">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<subreportParameter name="dfDocSignerTypes">
+					<subreportParameterExpression><![CDATA[$P{dfDocSignerTypes}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="docCode">
+					<subreportParameterExpression><![CDATA[$F{doccode}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[(java.sql.Connection)$P{docFlowConnection}]]></connectionExpression>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActSigners.jasper")]]></subreportExpression>
+			</subreport>
+		</band>
+	</summary>
+</jasperReport>

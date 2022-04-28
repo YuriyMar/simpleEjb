@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="ActCalc" pageWidth="495" pageHeight="842" columnWidth="495" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+	<property name="ireport.scriptlethandling" value="0"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.6105100000000008"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="PcodeAkt" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[new Integer(500000009)]]></defaultValueExpression>
+	</parameter>
+	<parameter name="Pperiod" class="java.lang.String">
+		<defaultValueExpression><![CDATA[" Виконано робіт"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="isNewTransportForSideWorks" class="java.lang.Integer" isForPrompting="false"/>
+	<queryString>
+		<![CDATA[SELECT
+   tkcls.name as workname
+   , tkcls.kod as worknumber
+   , tkcls.code  as calculationcode
+   , tkcls.isnotlicensedactivity
+   , calc_info.productionexpenssprcnt as productionExpencesPercent
+   , calc_info.administratvxpnssprcnt as administrativeExpensesPercent
+   , sum(p2h.generalexpenses) as gen_exp
+   , calc_info.calckindrefcode as calckindrefcode
+   , coalesce(tkcls.replacecounterkindcode , 0) as replacecounterkindcode
+   , (select coalesce(so.isnopay,0) from enact f , enservicesobject so where so.elementcode = f.elementcode and so.elementcode = pw.elementrefcode  and f.elementcode = pw.elementrefcode
+limit 1 ) as  isnopay
+   ,coalesce((select * from getENconnectionKindByActCode($P{PcodeAkt}) ),'') as isPriconnection
+FROM
+enact2enplanwork as a2p inner join enplanwork as pw on a2p.plancode = pw.code
+inner join enplanworkitem as pwi on pw.code = pwi.planrefcode
+inner join tktechcard as tkd on pwi.kartarefcode = tkd.code
+inner join tkclassificationtype as tkcls on tkd.classificationtypecode = tkcls.code
+inner join enplanworkitem2humen as p2h on p2h.classificationtyperfcd = tkcls.code
+left join (
+select acpw1.actrefcode, pwcl1.productionexpenssprcnt, coalesce(pwcl1.administratvxpnssprcnt, 0) as administratvxpnssprcnt, pwcl1.calckindrefcode from enact2enplanwork as acpw1
+    inner join enplancorrecthistory as his_f1 on acpw1.plancode = his_f1.plannewrefcode
+    inner join enplancorrecthistory as his_p1 on his_f1.planoldrefcode = his_p1.plannewrefcode
+    inner join enplancorrecthistory as his_m1 on his_p1.planoldrefcode = his_m1.plannewrefcode
+    inner join enplanwork2classfctntp as pwcl1 on his_m1.planoldrefcode = pwcl1.planrefcode
+    where his_f1.reasoncode = 5 and his_p1.reasoncode = 4 and his_m1.reasoncode = 13 and acpw1.actrefcode = $P{PcodeAkt}
+
+union all
+
+select acpw1.actrefcode, co1.productionexpenssprcnt, coalesce(co1.administratvxpnssprcnt,0) as administratvxpnssprcnt, co1.calckindrefcode from enact2enplanwork as acpw1
+    inner join enplancorrecthistory as his_f1 on acpw1.plancode = his_f1.plannewrefcode
+    inner join enplancorrecthistory as his_p1 on his_f1.planoldrefcode = his_p1.plannewrefcode
+    inner join enservicescost as sco1 on his_p1.planoldrefcode = sco1.planrefcode
+    inner join tkcalccost as co1 on sco1.tkcalccostrefcode = co1.code
+    where his_f1.reasoncode = 5 and his_p1.reasoncode = 4 and acpw1.actrefcode = $P{PcodeAkt}
+
+    limit 1) as calc_info on calc_info.actrefcode = a2p.actrefcode
+WHERE a2p.actrefcode = $P{PcodeAkt}
+    and pwi.countgen <> 0
+    and (tkcls.costworkscontractor = 0 or tkcls.costworkscontractor is null)
+group by tkcls.name
+    , tkcls.kod
+    , tkcls.code
+    , tkcls.isnotlicensedactivity
+    , pw.elementrefcode
+    , calc_info.productionexpenssprcnt
+    , calc_info.administratvxpnssprcnt
+    , calc_info.calckindrefcode
+order by tkcls.kod]]>
+	</queryString>
+	<field name="workname" class="java.lang.String"/>
+	<field name="worknumber" class="java.lang.String"/>
+	<field name="calculationcode" class="java.lang.Double"/>
+	<field name="gen_exp" class="java.math.BigDecimal"/>
+	<field name="productionExpencesPercent" class="java.math.BigDecimal">
+		<fieldDescription><![CDATA[]]></fieldDescription>
+	</field>
+	<field name="calckindrefcode" class="java.lang.Integer"/>
+	<field name="replacecounterkindcode" class="java.lang.Integer"/>
+	<field name="isnopay" class="java.lang.Integer"/>
+	<field name="isPriconnection" class="java.lang.String"/>
+	<field name="administrativeExpensesPercent" class="java.math.BigDecimal">
+		<fieldDescription><![CDATA[Процент адміністративних витрат]]></fieldDescription>
+	</field>
+	<variable name="vMaterials" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[( $V{vMaterials} != null ? $V{vMaterials} : new BigDecimal(0.00) )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="vOverAll" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[( ($V{vMaterials} != null) ? $V{vMaterials} : new BigDecimal(0) )
+.add(( ($V{vZarplata} != null) ? $V{vZarplata} : new BigDecimal(0) )
+.add(( ($V{vTransport} != null) ? $V{vTransport} : new BigDecimal(0) )
+.add( $F{calckindrefcode}.intValue() == 1 ? ($V{vZarplata70}.multiply($F{productionExpencesPercent})
+                                           .divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP))
+                                     : (
+									     ( $F{replacecounterkindcode} == 2 && $F{isnopay} == 1)
+									 ? new BigDecimal(0)
+									 : new BigDecimal(
+													 (   /*для присоеденения общепроизв начисляются на полную ЗП иначе на ЗП без доставки и водителей*/
+														(  ($F{isPriconnection}.equals("") || $F{isPriconnection} == null ) ?
+														  $V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+														: $V{vZarplata70}.doubleValue()
+														)
+														*$F{productionExpencesPercent}.doubleValue()
+													  ) / 100
+													).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)
+										)
+    )
+)
+).setScale(2, BigDecimal.ROUND_HALF_UP)
+.add( $F{calckindrefcode}.intValue() == 1 ? ($V{vZarplata70}.multiply($F{administrativeExpensesPercent})
+                                           .divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP))
+                                     : (
+									     ( $F{replacecounterkindcode} == 2 && $F{isnopay} == 1)
+									 ? new BigDecimal(0)
+									 : new BigDecimal(
+													 (   /*для присоеденения общепроизв начисляются на полную ЗП иначе на ЗП без доставки и водителей*/
+														(  ($F{isPriconnection}.equals("") || $F{isPriconnection} == null ) ?
+														  $V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+														: $V{vZarplata70}.doubleValue()
+														)
+														*$F{administrativeExpensesPercent}.doubleValue()
+													  ) / 100
+													).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)
+										)
+    )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="vZarplata" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[( $V{vZarplata} != null ? $V{vZarplata} : new BigDecimal(0.00) )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="vTransport" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[( $V{vTransport} != null ? $V{vTransport} : new BigDecimal(0.00) )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="vCommonCosts" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[( $V{vCommonCosts} != null ? $V{vCommonCosts} : new BigDecimal(0.00) )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="vZarplata70" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[( $V{vZarplata70} != null ? $V{vZarplata70} : new BigDecimal(0.00) )]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="countConsumerCounter" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[( $V{countConsumerCounter} != null ? $V{countConsumerCounter} : 0)]]></variableExpression>
+		<initialValueExpression><![CDATA[new Integer(0)]]></initialValueExpression>
+	</variable>
+	<variable name="sumpaysWorkBonusWithoutDelivery" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="sumChargeWorkerInvalidWithoutDelivery" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="sumChargeWorkerWithoutDelivery" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<group name="CalculationTitle">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="24" splitType="Stretch">
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false">
+					<reportElement key="textField-1" x="0" y="0" width="495" height="24"/>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="10" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{workname}+" ("+$F{worknumber}+")"]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band splitType="Stretch"/>
+		</groupFooter>
+	</group>
+	<group name="factorcost">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="15" splitType="Stretch">
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-9" x="0" y="0" width="495" height="15"/>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="10" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[" І. Прямі витрати "]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band splitType="Stretch"/>
+		</groupFooter>
+	</group>
+	<group name="materials">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="42" splitType="Stretch">
+				<subreport isUsingCache="true">
+					<reportElement key="subreport-1" positionType="Float" mode="Opaque" x="0" y="0" width="495" height="14"/>
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<subreportParameter name="PcodeAkt">
+						<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationcode">
+						<subreportParameterExpression><![CDATA[$F{calculationcode}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationnumber">
+						<subreportParameterExpression><![CDATA[$F{worknumber}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="Pperiod">
+						<subreportParameterExpression><![CDATA[$P{Pperiod}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<returnValue subreportVariable="summat" toVariable="vMaterials"/>
+					<returnValue subreportVariable="countConsumerCounter" toVariable="countConsumerCounter" calculation="Sum"/>
+					<subreportExpression><![CDATA[/*"D://Projects/EnergyServerEclipse/EnergyNet/reports/src/com/ksoe/energynet/reports/201109/ActServicesObject/Akt2_sub_materials.jasper"*/
+getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_materials.jasper")]]></subreportExpression>
+				</subreport>
+				<subreport isUsingCache="true">
+					<reportElement key="subreport-4" positionType="Float" mode="Opaque" x="0" y="14" width="495" height="14"/>
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<subreportParameter name="PcodeAkt">
+						<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationcode">
+						<subreportParameterExpression><![CDATA[$F{calculationcode}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationnumber">
+						<subreportParameterExpression><![CDATA[$F{worknumber}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="Pperiod">
+						<subreportParameterExpression><![CDATA[$P{Pperiod}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<subreportExpression><![CDATA[/*"D://Projects/EnergyServerEclipse/EnergyNet/reports/src/com/ksoe/energynet/reports/201109/ActServicesObject/Akt2_sub_materials.jasper"*/
+getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_customer_materials.jasper")]]></subreportExpression>
+				</subreport>
+				<subreport isUsingCache="true">
+					<reportElement key="subreport-4" positionType="Float" mode="Opaque" x="0" y="28" width="495" height="14"/>
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<subreportParameter name="calculationcode">
+						<subreportParameterExpression><![CDATA[$F{calculationcode}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="PcodeAkt">
+						<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationnumber">
+						<subreportParameterExpression><![CDATA[$F{worknumber}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_demontaj.jasper")]]></subreportExpression>
+				</subreport>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band splitType="Stretch"/>
+		</groupFooter>
+	</group>
+	<group name="zarppersonal">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="14" splitType="Stretch">
+				<subreport isUsingCache="true">
+					<reportElement key="subreport-2" positionType="Float" mode="Opaque" x="0" y="0" width="495" height="14"/>
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<subreportParameter name="calckindrefcode">
+						<subreportParameterExpression><![CDATA[$F{calckindrefcode}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationcode">
+						<subreportParameterExpression><![CDATA[$F{calculationcode}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="PcodeAkt">
+						<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationnumber">
+						<subreportParameterExpression><![CDATA[$F{worknumber}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<returnValue subreportVariable="backZarplata" toVariable="vZarplata"/>
+					<returnValue subreportVariable="backZarplataWithoutWithholdings" toVariable="vZarplata70"/>
+					<returnValue subreportVariable="sumpaysWorkBonusWithoutDelivery" toVariable="sumpaysWorkBonusWithoutDelivery"/>
+					<returnValue subreportVariable="sumChargeWorkerInvalidWithoutDelivery" toVariable="sumChargeWorkerInvalidWithoutDelivery"/>
+					<returnValue subreportVariable="sumChargeWorkerWithoutDelivery" toVariable="sumChargeWorkerWithoutDelivery"/>
+					<subreportExpression><![CDATA[/*"D://Projects/EnergyServerEclipse/EnergyNet/reports/src/com/ksoe/energynet/reports/201109/ActServicesObject/Akt2_sub_zarppersonal.jasper"*/
+$F{calckindrefcode}.intValue() == 1 ?
+getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_zarppersonal.jasper")
+:
+getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_zarppersonalWithAdditBonus.jasper")]]></subreportExpression>
+				</subreport>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band splitType="Stretch"/>
+		</groupFooter>
+	</group>
+	<group name="transport">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="28" splitType="Stretch">
+				<subreport isUsingCache="true">
+					<reportElement key="subreport-3" positionType="Float" mode="Opaque" x="0" y="0" width="495" height="14">
+						<printWhenExpression><![CDATA[new Boolean($P{isNewTransportForSideWorks}.intValue() != 1)]]></printWhenExpression>
+					</reportElement>
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<subreportParameter name="PcodeAkt">
+						<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationcode">
+						<subreportParameterExpression><![CDATA[$F{calculationcode}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationnumber">
+						<subreportParameterExpression><![CDATA[$F{worknumber}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<returnValue subreportVariable="allVitranaTransport" toVariable="vTransport"/>
+					<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_transport.jasper")]]></subreportExpression>
+				</subreport>
+				<subreport isUsingCache="true">
+					<reportElement key="subreport-6" positionType="Float" mode="Opaque" x="0" y="14" width="495" height="14">
+						<printWhenExpression><![CDATA[new Boolean($P{isNewTransportForSideWorks}.intValue() == 1)]]></printWhenExpression>
+					</reportElement>
+					<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+					<subreportParameter name="PcodeAkt">
+						<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationcode">
+						<subreportParameterExpression><![CDATA[$F{calculationcode}]]></subreportParameterExpression>
+					</subreportParameter>
+					<subreportParameter name="calculationnumber">
+						<subreportParameterExpression><![CDATA[$F{worknumber}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<returnValue subreportVariable="allVitranaTransport" toVariable="vTransport"/>
+					<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_transport_082012.jasper")]]></subreportExpression>
+				</subreport>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band splitType="Stretch"/>
+		</groupFooter>
+	</group>
+	<group name="CommonCosts">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="30" splitType="Stretch">
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-3" x="0" y="0" width="495" height="15">
+						<printWhenExpression><![CDATA[!($F{replacecounterkindcode}==2&&$F{isnopay}==1)]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="10" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[" ІІ. Накладні витрати"]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-4" x="0" y="15" width="445" height="15">
+						<printWhenExpression><![CDATA[!($F{replacecounterkindcode}==2&&$F{isnopay}==1)]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Загальновиробничі витрати по калькуляції № "+ $F{worknumber}+ " " + $F{productionExpencesPercent} + "% від суми заробітної плати"]]></textFieldExpression>
+				</textField>
+				<textField pattern="#0.00" isBlankWhenNull="false">
+					<reportElement key="textField-5" x="445" y="15" width="50" height="15">
+						<printWhenExpression><![CDATA[!($F{replacecounterkindcode}==2&&$F{isnopay}==1)]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{calckindrefcode}.intValue() == 1 ?
+$V{vZarplata70}
+.multiply($F{productionExpencesPercent})
+.divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP)
+:
+new BigDecimal(
+ (   /*для присоеденения общепроизв начисляются на полную ЗП иначе на ЗП без доставки и водителей*/
+    (  ($F{isPriconnection}.equals("") || $F{isPriconnection} == null ) ?
+      $V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+    : $V{vZarplata70}.doubleValue()
+    )
+    *$F{productionExpencesPercent}.doubleValue()
+  ) / 100
+).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="1" splitType="Stretch"/>
+		</groupFooter>
+	</group>
+	<group name="AdministrativeCosts">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="15">
+				<printWhenExpression><![CDATA[$F{administrativeExpensesPercent} != null
+&& $F{administrativeExpensesPercent}.compareTo(BigDecimal.ZERO) > 0
+&& !($F{replacecounterkindcode}==2&&$F{isnopay}==1)]]></printWhenExpression>
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-4" x="0" y="0" width="445" height="15">
+						<printWhenExpression><![CDATA[!($F{replacecounterkindcode}==2&&$F{isnopay}==1)]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Адміністративні витрати по калькуляції № "+ $F{worknumber}+ " " + $F{administrativeExpensesPercent} + "% від суми заробітної плати"]]></textFieldExpression>
+				</textField>
+				<textField pattern="#0.00" isBlankWhenNull="false">
+					<reportElement key="textField-5" x="445" y="0" width="50" height="15">
+						<printWhenExpression><![CDATA[!($F{replacecounterkindcode}==2&&$F{isnopay}==1)]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{calckindrefcode}.intValue() == 1 ?
+$V{vZarplata70}
+.multiply($F{administrativeExpensesPercent})
+.divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP)
+:
+new BigDecimal(
+ (   /*для присоеденения общепроизв начисляются на полную ЗП иначе на ЗП без доставки и водителей*/
+    (  ($F{isPriconnection}.equals("") || $F{isPriconnection} == null ) ?
+      $V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+    : $V{vZarplata70}.doubleValue()
+    )
+    *$F{administrativeExpensesPercent}.doubleValue()
+  ) / 100
+).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+	</group>
+	<group name="overall">
+		<groupExpression><![CDATA[$F{calculationcode}]]></groupExpression>
+		<groupHeader>
+			<band height="45" splitType="Stretch">
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-6" x="0" y="0" width="495" height="15"/>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="10" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[!($F{replacecounterkindcode}==2&&$F{isnopay}==1) ? " ІІI. Усього витрат " : "ІI. Усього витрат"]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-7" x="0" y="15" width="445" height="15"/>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Усьго витрат по калькуляції № "+$F{worknumber} +
+new String( $V{countConsumerCounter} != null ? ( $V{countConsumerCounter} > 0 ? " без урахування вартості лічильника замовника" : "" ) : "")]]></textFieldExpression>
+				</textField>
+				<textField isBlankWhenNull="false">
+					<reportElement key="textField-7" x="0" y="30" width="445" height="15">
+						<printWhenExpression><![CDATA[$F{calckindrefcode}.intValue() ==2
+&&
+$F{isPriconnection}.equals("")]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA["Всього витрат (без врахування амортизації, з-ти водіїв та матеріальних витрат)"]]></textFieldExpression>
+				</textField>
+				<textField pattern="#0.00" isBlankWhenNull="false">
+					<reportElement key="textField-8" x="445" y="30" width="50" height="15">
+						<printWhenExpression><![CDATA[$F{calckindrefcode}.intValue() ==2
+&&
+$F{isPriconnection}.equals("")]]></printWhenExpression>
+					</reportElement>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[new BigDecimal(
+(
+ ( $F{replacecounterkindcode}==2 && $F{isnopay}==1 ) ? 0 :
+(new BigDecimal(($V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+*$F{productionExpencesPercent}.doubleValue()) / 100 ).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)).doubleValue()
+)
++(
+ ( $F{replacecounterkindcode}==2 && $F{isnopay}==1 ) ? 0 :
+(new BigDecimal(($V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+*$F{administrativeExpensesPercent}.doubleValue()) / 100 ).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)).doubleValue()
+)
++$V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
++$V{sumChargeWorkerInvalidWithoutDelivery}.doubleValue()
++$V{sumChargeWorkerWithoutDelivery}.doubleValue()
+).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)]]></textFieldExpression>
+				</textField>
+				<textField pattern="#0.00" isBlankWhenNull="false">
+					<reportElement key="textField-8" x="445" y="15" width="50" height="15"/>
+					<box>
+						<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None">
+						<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[( ($V{vMaterials} != null) ? $V{vMaterials} : new BigDecimal(0) )
+.add(( ($V{vZarplata} != null) ? $V{vZarplata} : new BigDecimal(0) )
+.add(( ($V{vTransport} != null) ? $V{vTransport} : new BigDecimal(0) )
+.add( $F{calckindrefcode}.intValue() == 1 ? ($V{vZarplata70}.multiply($F{productionExpencesPercent})
+                                           .divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP))
+                                     : (
+									     ( $F{replacecounterkindcode} == 2 && $F{isnopay} == 1)
+									 ? new BigDecimal(0)
+									 : new BigDecimal(
+													 (   /*для присоеденения общепроизв начисляются на полную ЗП иначе на ЗП без доставки и водителей*/
+														(  ($F{isPriconnection}.equals("") || $F{isPriconnection} == null ) ?
+														  $V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+														: $V{vZarplata70}.doubleValue()
+														)
+														*$F{productionExpencesPercent}.doubleValue()
+													  ) / 100
+													).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)
+										)
+    )
+)
+).setScale(2, BigDecimal.ROUND_HALF_UP)
+.add( $F{calckindrefcode}.intValue() == 1 ? ($V{vZarplata70}.multiply($F{administrativeExpensesPercent})
+                                           .divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP))
+                                     : (
+									     ( $F{replacecounterkindcode} == 2 && $F{isnopay} == 1)
+									 ? new BigDecimal(0)
+									 : new BigDecimal(
+													 (   /*для присоеденения общепроизв начисляются на полную ЗП иначе на ЗП без доставки и водителей*/
+														(  ($F{isPriconnection}.equals("") || $F{isPriconnection} == null ) ?
+														  $V{sumpaysWorkBonusWithoutDelivery}.doubleValue()
+														: $V{vZarplata70}.doubleValue()
+														)
+														*$F{administrativeExpensesPercent}.doubleValue()
+													  ) / 100
+													).setScale(2,java.math.BigDecimal.ROUND_HALF_UP)
+										)
+    )]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band splitType="Stretch"/>
+		</groupFooter>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band splitType="Stretch"/>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band height="32" splitType="Stretch">
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-5" positionType="Float" mode="Opaque" x="0" y="0" width="495" height="32"/>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="PcalcCode">
+					<subreportParameterExpression><![CDATA[$F{calculationcode}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[/*"c:/Program Files (x86)/JasperSoft/iReport-1.2.7/Akt2_sub_summary.jasper"*/
+getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_podotchet.jasper")]]></subreportExpression>
+			</subreport>
+		</band>
+	</summary>
+</jasperReport>

@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="ActServices" pageWidth="595" pageHeight="842" columnWidth="496" leftMargin="85" rightMargin="14" topMargin="14" bottomMargin="85" scriptletClass="com.ksoe.energynet.reports.common.FINScriptlet" isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="2"/>
+	<property name="ireport.encoding" value="UTF-8"/>
+	<property name="ireport.zoom" value="1.3310000000000006"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="com.ksoe.energynet.valueobject.ENServicesContractStatus"/>
+	<import value="java.util.*"/>
+	<import value="com.ksoe.energynet.valueobject.ENServicesContractType"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="PcodeAkt" class="java.lang.Integer">
+		<defaultValueExpression><![CDATA[new Integer(0)]]></defaultValueExpression>
+	</parameter>
+	<parameter name="statusesNotToPrintDate" class="java.util.List" isForPrompting="false">
+		<parameterDescription><![CDATA[Коллекция статусов договоров присоединения при которых не надо печатать дату]]></parameterDescription>
+		<defaultValueExpression><![CDATA[Arrays.asList(ENServicesContractStatus.GOOD
+       , ENServicesContractStatus.BUDGETAPPROVED)]]></defaultValueExpression>
+	</parameter>
+	<parameter name="docFlowConnection" class="java.lang.Object" isForPrompting="false"/>
+	<parameter name="dfDocSignerTypes" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["-1"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select
+    numbergen,
+    dategen,
+    dateact,
+    buhname,
+    ename,
+    invnumber,
+    year,
+    selperiod.datestart,
+    selperiod.datefinal,
+    selperiod.departmentname,
+    case when  dategen >= to_date('01.08.2012','dd.mm.yyyy')  then 1 else 0 end  as isNewTransportForSideWorks,
+    etype,
+    '' as rencity,
+    contractdate,
+    contractnumberservices,
+    contractdateservices,
+    contractnumber,
+    contractservicessumma,
+    kindname ,
+    isnopay,
+    contractstatusrefcode,
+    contracttyperefcode ,
+    coalesce(contractservicessummapric,0) as contractservicessummapric,
+    (select a2d.dfdoccode from enact2dfdoc a2d where a2d.actrefcode = $P{PcodeAkt} order by a2d.code desc limit 1) as doccode
+from
+(
+	select
+	ena.numbergen,
+        ena.dategen,
+        ena.dateact,
+        enda.etype,
+        so.contractdate,
+	so.contractdateservices,
+	so.contractnumberservices,
+        so.contractnumber,
+        case when so.contractkindrefcode = 9 then
+        coalesce((select cct.costwithoutvat from encalccontracttotal cct, enplanwork pw
+        WHERE  so.elementcode = pw.elementrefcode
+    and cct.planrefcode = pw.code
+    and pw.kindcode = 5),0) + coalesce(so.topographysumma,0) +  coalesce(so.projagreesumma,0)
+        else so.contractservicessumma end as contractservicessumma,
+        COALESCE( enda.buhname , 'Не заведено' ) as buhname,
+        enda.ename,
+    	enda.invnumber,
+        to_char(ena.dategen,'yyyy') as year,
+        (select  ck.name from
+        enservicesobject2techcondtnsservices so2tc,
+        entechconditionsservcs tc, enconnectionkind ck
+        where so2tc.servicesobjectrefcode = so.code
+        and so2tc.techcondservrefcode = tc.code
+        and tc.connectionkindrefcode = ck.code) as kindname
+       , coalesce(so.isnopay,0) as isnopay
+	, so.contractstatusrefcode
+	, so.contracttyperefcode
+	,so.contractkindrefcode
+        ,(select  tc.tysummagen - tc.tysummavat from
+        enservicesobject2techcondtnsservices so2tc,
+        entechconditionsservcs tc, enconnectionkind ck
+        where so2tc.servicesobjectrefcode = so.code
+        and so2tc.techcondservrefcode = tc.code
+        and tc.connectionkindrefcode = ck.code) as contractservicessummapric
+	from
+      	enact ena,
+        enelement ene,
+        enelementdata enda,
+        enservicesobject as so
+	where
+    	ena.elementcode = ene.code
+  		and enda.ecode = ene.code
+        and so.elementcode = enda.ecode
+  		and ena.code = $P{PcodeAkt}
+) selda,
+(
+ Select
+ 	min(enworkorder.dategen) as datestart,
+    max(enworkorder.dategen) as datefinal,
+    max(endepartment.code) as depcode,
+    max(endepartment.shortname) as departmentname
+ from
+    enworkorder,
+    enworkorder2enplanwork,
+    enplanwork,
+    endepartment
+ where
+ 	enworkorder.code = enworkorder2enplanwork.workordercode
+    and enplanwork.code = enworkorder2enplanwork.plancode
+	and endepartment.code = enplanwork.departmentrefcode
+    and enplanwork.code in
+                     		(select
+                            	enp.code
+                     		 from
+                             	enact ena,
+                                enact2enplanwork ena2,
+                                enplanwork enp
+                      		where
+                            	ena.code = $P{PcodeAkt}
+                      			and ena.code = ena2.actrefcode
+                      			and ena2.plancode = enp.code)
+) selperiod]]>
+	</queryString>
+	<field name="numbergen" class="java.lang.String"/>
+	<field name="dategen" class="java.sql.Date"/>
+	<field name="buhname" class="java.lang.String"/>
+	<field name="ename" class="java.lang.String"/>
+	<field name="invnumber" class="java.lang.String"/>
+	<field name="year" class="java.lang.String"/>
+	<field name="datestart" class="java.sql.Date"/>
+	<field name="datefinal" class="java.sql.Date"/>
+	<field name="departmentname" class="java.lang.String"/>
+	<field name="etype" class="java.lang.Integer"/>
+	<field name="rencity" class="java.lang.String"/>
+	<field name="contractdate" class="java.sql.Date"/>
+	<field name="contractnumberservices" class="java.lang.String"/>
+	<field name="contractdateservices" class="java.sql.Date"/>
+	<field name="contractnumber" class="java.lang.String"/>
+	<field name="contractservicessumma" class="java.math.BigDecimal"/>
+	<field name="dateact" class="java.util.Date"/>
+	<field name="isNewTransportForSideWorks" class="java.lang.Integer"/>
+	<field name="kindname" class="java.lang.String"/>
+	<field name="isnopay" class="java.lang.Double">
+		<fieldDescription><![CDATA[Оплатный/безоплатный договор]]></fieldDescription>
+	</field>
+	<field name="contractstatusrefcode" class="java.lang.Integer">
+		<fieldDescription><![CDATA[Статус договору]]></fieldDescription>
+	</field>
+	<field name="contracttyperefcode" class="java.lang.Integer">
+		<fieldDescription><![CDATA[Тип договору]]></fieldDescription>
+	</field>
+	<field name="contractservicessummapric" class="java.math.BigDecimal"/>
+	<field name="doccode" class="java.lang.Integer"/>
+	<variable name="naryadi" class="java.lang.String">
+		<variableExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getnaryadi($P{PcodeAkt} )]]></variableExpression>
+	</variable>
+	<variable name="vperiod" class="java.lang.String" resetType="None">
+		<variableExpression><![CDATA["Виконано робіт з " + new SimpleDateFormat("dd.MM.yyyy").format($F{datestart}).toString() + " по " +  new SimpleDateFormat("dd.MM.yyyy").format($F{datefinal}).toString()]]></variableExpression>
+		<initialValueExpression><![CDATA["Виконано робіт з " + new SimpleDateFormat("dd.MM.yyyy").format($F{datestart}).toString() + " по " +  new SimpleDateFormat("dd.MM.yyyy").format($F{datefinal}).toString()]]></initialValueExpression>
+	</variable>
+	<variable name="vCalculationAll" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{vCalculationAll}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="sumCostRecovery" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{sumCostRecovery}]]></variableExpression>
+		<initialValueExpression><![CDATA[new BigDecimal(0)]]></initialValueExpression>
+	</variable>
+	<variable name="countConsumerCounter" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[( $V{countConsumerCounter} != null ? $V{countConsumerCounter} : 0)]]></variableExpression>
+		<initialValueExpression><![CDATA[0]]></initialValueExpression>
+	</variable>
+	<variable name="companyShortName" class="java.lang.String">
+		<variableExpression><![CDATA[$V{companyShortName}]]></variableExpression>
+		<initialValueExpression><![CDATA[((com.ksoe.energynet.reports.common.FINScriptlet)$P{REPORT_SCRIPTLET}).getSettings("company.shortname", $F{dategen})]]></initialValueExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="160" splitType="Stretch">
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-3" stretchType="RelativeToTallestObject" mode="Transparent" x="0" y="134" width="496" height="25" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None">
+					<font fontName="Times New Roman" size="10" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" АКТ № " + $F{numbergen} + "\n" +
+" приймання виконаних робіт з послуг на сторону " + "\n" + new String(($F{isnopay} == 1 ? " (безоплатні) " : " ")) +
+" від " + new SimpleDateFormat("dd.MM.yyyy").format($F{dateact}).toString()+"р."]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" evaluationTime="Report" isBlankWhenNull="true">
+				<reportElement key="textField-10" positionType="Float" mode="Transparent" x="212" y="11" width="284" height="123" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Top" rotation="None">
+					<font fontName="Times New Roman" size="7" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" Найменування об'єкту " +$F{ename}+ "\n" +
+" № догов "+ ($F{contractnumberservices} == null ? " " : $F{contractnumberservices} + "/") + $F{contractnumber}+
+($F{contractdateservices} == null ? " " :
+    ( /*SUPP-88940*/ $P{statusesNotToPrintDate}.contains($F{contractstatusrefcode})
+        && $F{contracttyperefcode} == ENServicesContractType.CONNECTION
+        ? "" : " від "+ new SimpleDateFormat("dd.MM.yyyy").format($F{contractdateservices}).toString() ) +
+    " " + "\n") +
+($F{kindname} == null ? " " : " Тип приєднання : "+ $F{kindname} + " " + "\n") +
+(($V{naryadi} != null) ? $V{naryadi} : " ") + "\n" +
+new String($F{contracttyperefcode}==5 ? " Договірна вартість (без ПДВ): "+ $F{contractservicessummapric}.setScale(2,BigDecimal.ROUND_HALF_UP) + "  грн." :
+" Договірна вартість (без ПДВ): "+$F{contractservicessumma}.setScale(2,BigDecimal.ROUND_HALF_UP) + "  грн." )]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" evaluationTime="Report" pattern="" isBlankWhenNull="true">
+				<reportElement key="textField-23" x="212" y="0" width="239" height="11"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Right">
+					<font fontName="Times New Roman" size="6" isItalic="false" pdfFontName="times.ttf"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{rencity}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="textField-24" mode="Transparent" x="0" y="0" width="185" height="32" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Top" rotation="None">
+					<font fontName="Times New Roman" size="7" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{companyShortName}  + "\n" +
+$F{departmentname}+ "\n"]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="2" splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="42" splitType="Stretch">
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-1" positionType="Float" mode="Opaque" x="0" y="0" width="496" height="14"/>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_sub_work.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-8" positionType="Float" mode="Opaque" x="0" y="14" width="496" height="14"/>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="isNewTransportForSideWorks">
+					<subreportParameterExpression><![CDATA[$F{isNewTransportForSideWorks}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="vOverAll" toVariable="vCalculationAll"/>
+				<returnValue subreportVariable="countConsumerCounter" toVariable="countConsumerCounter" calculation="Sum"/>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActCalc.jasper")]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-9" positionType="Float" mode="Opaque" x="0" y="28" width="496" height="14"/>
+				<parametersMapExpression><![CDATA[$P{REPORT_PARAMETERS_MAP}]]></parametersMapExpression>
+				<subreportParameter name="PcodeAkt">
+					<subreportParameterExpression><![CDATA[$P{PcodeAkt}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="Pperiod">
+					<subreportParameterExpression><![CDATA[$V{vperiod}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<returnValue subreportVariable="sumSuma" toVariable="sumCostRecovery" calculation="Sum"/>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActServices_costrecovery.jasper")]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band height="43" splitType="Prevent">
+			<textField pattern="" isBlankWhenNull="false">
+				<reportElement key="textField-7" positionType="Float" mode="Transparent" x="0" y="0" width="381" height="15" isPrintWhenDetailOverflows="true" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle" rotation="None" markup="none">
+					<font fontName="Times New Roman" size="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="timesbd.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA["ВСЬОГО ПО АКТУ " +
+( $V{countConsumerCounter} > 0 ? "без урахування вартості лічильника замовника:" : ":" )]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" evaluationTime="Report" pattern="###0.00" isBlankWhenNull="false">
+				<reportElement key="textField-6" positionType="Float" mode="Opaque" x="381" y="0" width="115" height="15" isPrintWhenDetailOverflows="true" forecolor="#000000" backcolor="#FFFFFF"/>
+				<box>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle" rotation="None">
+					<font fontName="Times New Roman" size="8" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false" pdfFontName="times.ttf" pdfEncoding="Cp1251" isPdfEmbedded="true"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{vCalculationAll}.add($V{sumCostRecovery})]]></textFieldExpression>
+			</textField>
+			<subreport isUsingCache="true">
+				<reportElement key="subreport-7" positionType="Float" mode="Opaque" x="0" y="18" width="496" height="23"/>
+				<subreportParameter name="dfDocSignerTypes">
+					<subreportParameterExpression><![CDATA[$P{dfDocSignerTypes}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="docCode">
+					<subreportParameterExpression><![CDATA[$F{doccode}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[(java.sql.Connection)$P{docFlowConnection}]]></connectionExpression>
+				<subreportExpression><![CDATA[getClass().getResourceAsStream("/com/ksoe/energynet/reports/201109/AVWCommon2/ActSigning/ActSigners.jasper")]]></subreportExpression>
+			</subreport>
+		</band>
+	</summary>
+</jasperReport>
